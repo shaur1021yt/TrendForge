@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env
+.env.local
+.env*.local
+trendforge.db
+*.db
+.vercel
+out/
+.DS_Store
+trendforge.db*
