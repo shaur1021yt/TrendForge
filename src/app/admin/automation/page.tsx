@@ -21,13 +21,26 @@ export default function AutomationPage() {
     setRunning(true);
     setLastResult(null);
     try {
+      // Auto-enable if disabled
+      if (settings && !settings.enabled) {
+        await fetch('/api/pipeline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'enable' }) });
+      }
       const res = await fetch('/api/pipeline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'full' }) });
-      const data = await res.json();
-      if (data.ok) {
-        const r = data.result;
-        setLastResult(`✅ Pipeline completed! Discovered ${r.discovery.discovered} opportunities, ${r.discovery.approved} approved. Generated ${r.generation.generated} tools, ${r.generation.published} published.`);
+      const text = await res.text();
+      let data: Record<string, unknown>;
+      try { data = JSON.parse(text); } catch { data = { error: text || 'Empty response (status ' + res.status + ')' }; }
+      if (res.ok && data.ok) {
+        const r = data.result as { discovery: { discovered: number; approved: number }; generation: { generated: number; published: number } };
+        const d = r.discovery;
+        const g = r.generation;
+        if (d.discovered === 0 && g.generated === 0) {
+          setLastResult('⚠️ Pipeline ran but found no new opportunities. All topics may already be processed. Go to Opportunities and reset some to "discovered" to try again.');
+        } else {
+          setLastResult(`✅ Pipeline completed! Discovered ${d.discovered} opportunities, ${d.approved} approved. Generated ${g.generated} tools, ${g.published} published.`);
+        }
       } else {
-        setLastResult('❌ ' + (data.error || 'Pipeline failed'));
+        const errMsg = data.error || data.message || JSON.stringify(data);
+        setLastResult('❌ ' + errMsg);
       }
       fetchData();
     } catch (e) {
@@ -45,6 +58,24 @@ export default function AutomationPage() {
   const handleSettingChange = async (key: string, value: unknown) => {
     await fetch('/api/admin/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: value }) });
     fetchData();
+  };
+
+  const handleResetTopics = async () => {
+    setRunning(true);
+    setLastResult('Resetting topics...');
+    try {
+      const res = await fetch('/api/pipeline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset' }) });
+      const data = await res.json();
+      if (data.ok) {
+        setLastResult(`✅ Reset ${data.reset} topics back to discovered. Click "Run Full Pipeline" to process them again.`);
+      } else {
+        setLastResult('❌ ' + (data.error || 'Reset failed'));
+      }
+      fetchData();
+    } catch (e) {
+      setLastResult('❌ Reset error: ' + String(e));
+    }
+    setRunning(false);
   };
 
   if (!settings) return <div className="space-y-4"><div className="h-32 bg-muted rounded-xl animate-pulse" /><div className="h-64 bg-muted rounded-xl animate-pulse" /></div>;
@@ -69,7 +100,6 @@ export default function AutomationPage() {
             {settings.enabled ? <><Pause className="h-4 w-4" /> Enabled</> : <><Play className="h-4 w-4" /> Disabled</>}
           </button>
         </div>
-        {lastResult && <div className="p-4 bg-muted rounded-xl mb-4 text-sm">{lastResult}</div>}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[{ step: '1. Discover', icon: '🔍' }, { step: '2. Score', icon: '📊' }, { step: '3. Generate', icon: '🛠️' }, { step: '4. Quality', icon: '✅' }, { step: '5. Publish', icon: '🚀' }].map((s, i) => (
             <div key={i} className="p-3 bg-muted/50 rounded-xl text-center">
@@ -103,7 +133,15 @@ export default function AutomationPage() {
       </div>
 
       <div className="bg-card border border-border rounded-xl p-6">
-        <h3 className="font-bold text-foreground flex items-center gap-2 mb-4"><Clock className="h-5 w-5 text-primary" /> Recent Jobs</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-foreground flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> Recent Jobs</h3>
+          <button onClick={handleResetTopics} className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200">
+            Reset Topics & Re-run
+          </button>
+        </div>
+        {lastResult && (
+          <div className="p-4 bg-muted rounded-xl mb-4 text-sm whitespace-pre-wrap">{lastResult}</div>
+        )}
         <div className="text-center py-8 text-muted-foreground text-sm">
           <Clock className="h-10 w-10 mx-auto mb-2 opacity-30" />
           <p>Run the pipeline to create your first automation jobs</p>
