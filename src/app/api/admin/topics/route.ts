@@ -4,25 +4,20 @@ import { getAllTopics, getTopicCount, updateTopicStatus, seedTopics } from '@/li
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  seedTopics();
+  await seedTopics();
   const sp = request.nextUrl.searchParams;
-  const status = sp.get('status') || undefined;
-  const category = sp.get('category') || undefined;
-  const limit = parseInt(sp.get('limit') || '50');
-
-  const topics = getAllTopics({
-    status: status || undefined,
-    category: category || undefined,
-    limit,
+  const topics = await getAllTopics({
+    status: sp.get('status') || undefined,
+    category: sp.get('category') || undefined,
+    limit: parseInt(sp.get('limit') || '50'),
   });
-  const total = getTopicCount();
+  const total = await getTopicCount();
   return NextResponse.json({ topics, total });
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { id, status } = body;
+  const { id, status } = await request.json();
   if (!id || !status) return NextResponse.json({ error: 'Missing id or status' }, { status: 400 });
-  updateTopicStatus(id, status);
+  await updateTopicStatus(id, status);
   return NextResponse.json({ ok: true });
 }

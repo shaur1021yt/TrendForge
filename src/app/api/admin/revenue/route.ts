@@ -4,11 +4,9 @@ import { getTotalRevenue, getRevenueByDate, getRevenueBySource } from '@/lib/dat
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const sp = request.nextUrl.searchParams;
-  const days = parseInt(sp.get('days') || '30');
-
-  const totalRevenue = getTotalRevenue();
-  const byDate = getRevenueByDate(days);
-  const bySource = getRevenueBySource();
+  const days = parseInt(request.nextUrl.searchParams.get('days') || '30');
+  const totalRevenue = await getTotalRevenue();
+  const byDate = await getRevenueByDate(days);
+  const bySource = await getRevenueBySource();
   return NextResponse.json({ totalRevenue, byDate, bySource });
 }

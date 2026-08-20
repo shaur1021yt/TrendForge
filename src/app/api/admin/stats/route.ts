@@ -4,8 +4,8 @@ import { getDashboardStats, getForgeReport, seedTopics } from '@/lib/data';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  seedTopics();
-  const stats = getDashboardStats();
-  const report = getForgeReport();
+  await seedTopics();
+  const stats = await getDashboardStats();
+  const report = await getForgeReport();
   return NextResponse.json({ stats, report });
 }

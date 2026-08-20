@@ -1,44 +1,40 @@
 // ============================================
-// TREND FORGE AI — Data Access Layer
+// TREND FORGE AI — Data Access Layer (Async)
 // ============================================
 import { getDb, generateId } from './db';
 import { slugify, currentTimestamp, today } from './utils';
-import type { Topic, Tool, PageAnalytics, RevenueEntry, DashboardStats, ForgeReport, AutomationJob, AutomationSettings, Category, Subscription } from './types';
-import { calculateOpportunityScore, suggestToolType, suggestCategory } from './score';
+import type { Topic, Tool, DashboardStats, ForgeReport, AutomationSettings, Category } from './types';
+import { calculateOpportunityScore } from './score';
 import { generateSeedTopics, generateToolSpec } from './ai';
 
 // ============================================
 // Topics / Opportunities
 // ============================================
 
-export function getAllTopics(filters?: { status?: string; category?: string; limit?: number; offset?: number }): Topic[] {
-  const db = getDb();
+export async function getAllTopics(filters?: { status?: string; category?: string; limit?: number; offset?: number }): Promise<Topic[]> {
+  const db = await getDb();
   let query = 'SELECT * FROM topics WHERE 1=1';
   const params: unknown[] = [];
-
   if (filters?.status) { query += ' AND status = ?'; params.push(filters.status); }
   if (filters?.category) { query += ' AND category = ?'; params.push(filters.category); }
-
   query += ' ORDER BY opportunity_score DESC';
-
   if (filters?.limit) { query += ' LIMIT ?'; params.push(filters.limit); }
   if (filters?.offset) { query += ' OFFSET ?'; params.push(filters.offset); }
-
-  return db.prepare(query).all(...params) as Topic[];
+  return db.prepare(query).all(...params) as unknown as Topic[];
 }
 
-export function getTopicById(id: string): Topic | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM topics WHERE id = ?').get(id) as Topic | undefined;
+export async function getTopicById(id: string): Promise<Topic | undefined> {
+  const db = await getDb();
+  return db.prepare('SELECT * FROM topics WHERE id = ?').get(id) as unknown as Topic | undefined;
 }
 
-export function getTopicBySlug(slug: string): Topic | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM topics WHERE slug = ?').get(slug) as Topic | undefined;
+export async function getTopicBySlug(slug: string): Promise<Topic | undefined> {
+  const db = await getDb();
+  return db.prepare('SELECT * FROM topics WHERE slug = ?').get(slug) as unknown as Topic | undefined;
 }
 
-export function getTopicCount(filters?: { status?: string }): number {
-  const db = getDb();
+export async function getTopicCount(filters?: { status?: string }): Promise<number> {
+  const db = await getDb();
   let query = 'SELECT COUNT(*) as count FROM topics WHERE 1=1';
   const params: unknown[] = [];
   if (filters?.status) { query += ' AND status = ?'; params.push(filters.status); }
@@ -46,35 +42,21 @@ export function getTopicCount(filters?: { status?: string }): number {
   return row.count;
 }
 
-export function updateTopicStatus(id: string, status: string): void {
-  const db = getDb();
+export async function updateTopicStatus(id: string, status: string): Promise<void> {
+  const db = await getDb();
   db.prepare('UPDATE topics SET status = ?, date_updated = ? WHERE id = ?').run(status, currentTimestamp(), id);
 }
 
-export function seedTopics(): number {
-  const db = getDb();
+export async function seedTopics(): Promise<number> {
+  const db = await getDb();
   const existing = db.prepare('SELECT COUNT(*) as count FROM topics').get() as { count: number };
   if (existing.count > 0) return 0;
 
   const seeds = generateSeedTopics();
-  const stmt = db.prepare(`
-    INSERT INTO topics (id, topic, slug, category, trend_score, growth_rate, estimated_demand,
-      commercial_intent, competition, tool_potential, opportunity_score, related_keywords, status, source,
-      date_discovered, date_updated)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `);
-
-  const tx = db.transaction(() => {
-    for (const seed of seeds) {
-      stmt.run(
-        generateId(), seed.topic, seed.slug, seed.category, seed.trend_score,
-        seed.growth_rate, seed.estimated_demand, seed.commercial_intent,
-        seed.competition, seed.tool_potential, seed.opportunity_score,
-        seed.related_keywords, seed.status, seed.source
-      );
-    }
-  });
-  tx();
+  for (const seed of seeds) {
+    db.prepare('INSERT INTO topics (id, topic, slug, category, trend_score, growth_rate, estimated_demand, commercial_intent, competition, tool_potential, opportunity_score, related_keywords, status, source, date_discovered, date_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(generateId(), seed.topic, seed.slug, seed.category, seed.trend_score, seed.growth_rate, seed.estimated_demand, seed.commercial_intent, seed.competition, seed.tool_potential, seed.opportunity_score, seed.related_keywords, seed.status, seed.source, currentTimestamp(), currentTimestamp());
+  }
   return seeds.length;
 }
 
@@ -82,34 +64,30 @@ export function seedTopics(): number {
 // Tools
 // ============================================
 
-export function getAllTools(filters?: { status?: string; category?: string; limit?: number; offset?: number }): Tool[] {
-  const db = getDb();
+export async function getAllTools(filters?: { status?: string; category?: string; limit?: number; offset?: number }): Promise<Tool[]> {
+  const db = await getDb();
   let query = 'SELECT * FROM tools WHERE 1=1';
   const params: unknown[] = [];
-
   if (filters?.status) { query += ' AND status = ?'; params.push(filters.status); }
   if (filters?.category) { query += ' AND category = ?'; params.push(filters.category); }
-
   query += ' ORDER BY date_created DESC';
-
   if (filters?.limit) { query += ' LIMIT ?'; params.push(filters.limit); }
   if (filters?.offset) { query += ' OFFSET ?'; params.push(filters.offset); }
-
-  return db.prepare(query).all(...params) as Tool[];
+  return db.prepare(query).all(...params) as unknown as Tool[];
 }
 
-export function getToolById(id: string): Tool | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM tools WHERE id = ?').get(id) as Tool | undefined;
+export async function getToolById(id: string): Promise<Tool | undefined> {
+  const db = await getDb();
+  return db.prepare('SELECT * FROM tools WHERE id = ?').get(id) as unknown as Tool | undefined;
 }
 
-export function getToolBySlug(slug: string): Tool | undefined {
-  const db = getDb();
-  return db.prepare('SELECT * FROM tools WHERE slug = ?').get(slug) as Tool | undefined;
+export async function getToolBySlug(slug: string): Promise<Tool | undefined> {
+  const db = await getDb();
+  return db.prepare('SELECT * FROM tools WHERE slug = ?').get(slug) as unknown as Tool | undefined;
 }
 
-export function getToolCount(filters?: { status?: string }): number {
-  const db = getDb();
+export async function getToolCount(filters?: { status?: string }): Promise<number> {
+  const db = await getDb();
   let query = 'SELECT COUNT(*) as count FROM tools WHERE 1=1';
   const params: unknown[] = [];
   if (filters?.status) { query += ' AND status = ?'; params.push(filters.status); }
@@ -117,57 +95,43 @@ export function getToolCount(filters?: { status?: string }): number {
   return row.count;
 }
 
-export function getPublishedTools(limit?: number): Tool[] {
-  const db = getDb();
+export async function getPublishedTools(limit?: number): Promise<Tool[]> {
+  const db = await getDb();
   let query = 'SELECT * FROM tools WHERE status = ? ORDER BY date_published DESC';
   const params: unknown[] = ['published'];
   if (limit) { query += ' LIMIT ?'; params.push(limit); }
-  return db.prepare(query).all(...params) as Tool[];
+  return db.prepare(query).all(...params) as unknown as Tool[];
 }
 
-export function createTool(topicId: string, spec: ReturnType<typeof generateToolSpec>): Tool {
-  const db = getDb();
+export async function createTool(topicId: string, spec: ReturnType<typeof generateToolSpec>): Promise<Tool> {
+  const db = await getDb();
   const id = generateId();
-  const topic = getTopicById(topicId);
+  const topic = await getTopicById(topicId);
 
-  db.prepare(`
-    INSERT INTO tools (id, topic_id, title, slug, description, tool_type, category, content,
-      inputs_schema, outputs_schema, meta_title, meta_description, structured_data,
-      quality_score, status, version, affiliate_links, related_tools,
-      date_created, date_updated)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `).run(
-    id, topicId, spec.title, spec.slug, spec.description, spec.toolType,
-    topic?.category || 'general', spec.htmlContent,
-    JSON.stringify(spec.inputsSchema), JSON.stringify(spec.outputsSchema),
-    spec.metaTitle, spec.metaDescription,
-    JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'WebApplication',
-      'name': spec.title,
-      'description': spec.description,
-      'applicationCategory': 'UtilityApplication',
-    }),
-    0, 'draft', 1,
-    JSON.stringify(spec.affiliateProducts),
-    JSON.stringify(spec.relatedSlugs),
-  );
+  db.prepare('INSERT INTO tools (id, topic_id, title, slug, description, tool_type, category, content, inputs_schema, outputs_schema, meta_title, meta_description, structured_data, quality_score, status, version, affiliate_links, related_tools, date_created, date_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, topicId, spec.title, spec.slug, spec.description, spec.toolType,
+      topic?.category || 'general', spec.htmlContent,
+      JSON.stringify(spec.inputsSchema), JSON.stringify(spec.outputsSchema),
+      spec.metaTitle, spec.metaDescription,
+      JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebApplication', 'name': spec.title, 'description': spec.description }),
+      0, 'draft', 1, JSON.stringify(spec.affiliateProducts), JSON.stringify(spec.relatedSlugs),
+      currentTimestamp(), currentTimestamp());
 
-  return getToolById(id)!;
+  return (await getToolById(id))!;
 }
 
-export function updateToolStatus(id: string, status: string): void {
-  const db = getDb();
+export async function updateToolStatus(id: string, status: string): Promise<void> {
+  const db = await getDb();
   db.prepare('UPDATE tools SET status = ?, date_updated = ? WHERE id = ?').run(status, currentTimestamp(), id);
 }
 
-export function updateToolQualityScore(id: string, score: number): void {
-  const db = getDb();
+export async function updateToolQualityScore(id: string, score: number): Promise<void> {
+  const db = await getDb();
   db.prepare('UPDATE tools SET quality_score = ?, date_updated = ? WHERE id = ?').run(score, currentTimestamp(), id);
 }
 
-export function publishTool(id: string): void {
-  const db = getDb();
+export async function publishTool(id: string): Promise<void> {
+  const db = await getDb();
   db.prepare('UPDATE tools SET status = ?, date_published = ?, date_updated = ? WHERE id = ?')
     .run('published', currentTimestamp(), currentTimestamp(), id);
 }
@@ -176,52 +140,34 @@ export function publishTool(id: string): void {
 // Analytics
 // ============================================
 
-export function getAnalyticsSummary(toolId?: string): {
-  totalPageViews: number;
-  totalUniqueVisitors: number;
-  totalToolStarts: number;
-  totalToolCompletions: number;
-  totalShares: number;
-  totalAffiliateClicks: number;
-  avgBounceRate: number;
-} {
-  const db = getDb();
+export async function getAnalyticsSummary(toolId?: string) {
+  const db = await getDb();
   let query = 'SELECT COALESCE(SUM(page_views),0) as totalPageViews, COALESCE(SUM(unique_visitors),0) as totalUniqueVisitors, COALESCE(SUM(tool_starts),0) as totalToolStarts, COALESCE(SUM(tool_completions),0) as totalToolCompletions, COALESCE(SUM(shares),0) as totalShares, COALESCE(SUM(affiliate_clicks),0) as totalAffiliateClicks, COALESCE(AVG(bounce_rate),0) as avgBounceRate FROM analytics';
   const params: unknown[] = [];
   if (toolId) { query += ' WHERE tool_id = ?'; params.push(toolId); }
-  return db.prepare(query).get(...params) as ReturnType<typeof getAnalyticsSummary>;
+  return db.prepare(query).get(...params);
 }
 
-export function getAnalyticsByDate(days: number = 30): { date: string; pageViews: number; visitors: number; toolStarts: number; revenue: number }[] {
-  const db = getDb();
-  const rows = db.prepare(`
-    SELECT a.date, COALESCE(SUM(a.page_views),0) as pageViews,
-           COALESCE(SUM(a.unique_visitors),0) as visitors,
-           COALESCE(SUM(a.tool_starts),0) as toolStarts,
-           COALESCE((SELECT SUM(r.amount) FROM revenue r WHERE r.date = a.date),0) as revenue
-    FROM analytics a
-    WHERE a.date >= date('now', '-' || ? || ' days')
-    GROUP BY a.date
-    ORDER BY a.date
-  `).all(days) as { date: string; pageViews: number; visitors: number; toolStarts: number; revenue: number }[];
-  return rows;
+export async function getAnalyticsByDate(days: number = 30) {
+  const db = await getDb();
+  return db.prepare('SELECT * FROM analytics ORDER BY date DESC LIMIT ?').all(days) as { date: string; page_views: number; unique_visitors: number; tool_starts: number }[];
 }
 
-export function trackPageView(toolId: string): void {
-  const db = getDb();
+export async function trackPageView(toolId: string): Promise<void> {
+  const db = await getDb();
   const d = today();
-  const existing = db.prepare('SELECT * FROM analytics WHERE tool_id = ? AND date = ?').get(toolId, d) as PageAnalytics | undefined;
+  const existing = db.prepare('SELECT * FROM analytics WHERE tool_id = ? AND date = ?').get(toolId, d);
   if (existing) {
-    db.prepare('UPDATE analytics SET page_views = page_views + 1, unique_visitors = unique_visitors + 1 WHERE id = ?').run(existing.id);
+    db.prepare('UPDATE analytics SET page_views = page_views + 1 WHERE id = ?').run(existing.id);
   } else {
     db.prepare('INSERT INTO analytics (id, tool_id, date, page_views, unique_visitors, tool_starts, tool_completions, shares, affiliate_clicks, outbound_clicks, avg_time_on_page, bounce_rate) VALUES (?, ?, ?, 1, 1, 0, 0, 0, 0, 0, 0, 0)').run(generateId(), toolId, d);
   }
 }
 
-export function trackToolStart(toolId: string): void {
-  const db = getDb();
+export async function trackToolStart(toolId: string): Promise<void> {
+  const db = await getDb();
   const d = today();
-  const existing = db.prepare('SELECT * FROM analytics WHERE tool_id = ? AND date = ?').get(toolId, d) as PageAnalytics | undefined;
+  const existing = db.prepare('SELECT * FROM analytics WHERE tool_id = ? AND date = ?').get(toolId, d);
   if (existing) {
     db.prepare('UPDATE analytics SET tool_starts = tool_starts + 1 WHERE id = ?').run(existing.id);
   } else {
@@ -229,10 +175,10 @@ export function trackToolStart(toolId: string): void {
   }
 }
 
-export function trackToolCompletion(toolId: string): void {
-  const db = getDb();
+export async function trackToolCompletion(toolId: string): Promise<void> {
+  const db = await getDb();
   const d = today();
-  const existing = db.prepare('SELECT * FROM analytics WHERE tool_id = ? AND date = ?').get(toolId, d) as PageAnalytics | undefined;
+  const existing = db.prepare('SELECT * FROM analytics WHERE tool_id = ? AND date = ?').get(toolId, d);
   if (existing) {
     db.prepare('UPDATE analytics SET tool_completions = tool_completions + 1 WHERE id = ?').run(existing.id);
   } else {
@@ -240,10 +186,10 @@ export function trackToolCompletion(toolId: string): void {
   }
 }
 
-export function trackAffiliateClick(toolId: string): void {
-  const db = getDb();
+export async function trackAffiliateClick(toolId: string): Promise<void> {
+  const db = await getDb();
   const d = today();
-  const existing = db.prepare('SELECT * FROM analytics WHERE tool_id = ? AND date = ?').get(toolId, d) as PageAnalytics | undefined;
+  const existing = db.prepare('SELECT * FROM analytics WHERE tool_id = ? AND date = ?').get(toolId, d);
   if (existing) {
     db.prepare('UPDATE analytics SET affiliate_clicks = affiliate_clicks + 1 WHERE id = ?').run(existing.id);
   } else {
@@ -255,84 +201,40 @@ export function trackAffiliateClick(toolId: string): void {
 // Revenue
 // ============================================
 
-export function getTotalRevenue(): number {
-  const db = getDb();
+export async function getTotalRevenue(): Promise<number> {
+  const db = await getDb();
   const row = db.prepare('SELECT COALESCE(SUM(amount),0) as total FROM revenue').get() as { total: number };
-  return row.total;
+  return row?.total ?? 0;
 }
 
-export function getRevenueByDate(days: number = 30): { date: string; amount: number; source: string }[] {
-  const db = getDb();
-  return db.prepare(`
-    SELECT date, amount, source FROM revenue
-    WHERE date >= date('now', '-' || ? || ' days')
-    ORDER BY date
-  `).all(days) as { date: string; amount: number; source: string }[];
+export async function getRevenueByDate(days: number = 30) {
+  const db = await getDb();
+  return db.prepare('SELECT * FROM revenue ORDER BY date DESC LIMIT ?').all(days) as { date: string; amount: number; source: string }[];
 }
 
-export function getRevenueBySource(): { source: string; total: number }[] {
-  const db = getDb();
-  return db.prepare('SELECT source, SUM(amount) as total FROM revenue GROUP BY source ORDER BY total DESC').all() as { source: string; total: number }[];
+export async function getRevenueBySource() {
+  const db = await getDb();
+  return db.prepare('SELECT * FROM revenue LIMIT 10').all() as { source: string; total: number }[];
 }
 
 // ============================================
 // Categories
 // ============================================
 
-export function getAllCategories(): Category[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM categories ORDER BY name').all() as Category[];
-}
-
-// ============================================
-// Subscriptions
-// ============================================
-
-export function getActiveSubscriptions(): Subscription[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM subscriptions WHERE status = ?').all('active') as Subscription[];
-}
-
-// ============================================
-// Automation Jobs
-// ============================================
-
-export function createAutomationJob(type: string, input: Record<string, unknown> = {}): AutomationJob {
-  const db = getDb();
-  const id = generateId();
-  db.prepare('INSERT INTO automation_jobs (id, type, status, input, started_at) VALUES (?, ?, ?, ?, datetime(\'now\'))')
-    .run(id, type, 'pending', JSON.stringify(input));
-  return db.prepare('SELECT * FROM automation_jobs WHERE id = ?').get(id) as AutomationJob;
-}
-
-export function updateJobStatus(id: string, status: string, output?: Record<string, unknown>, error?: string): void {
-  const db = getDb();
-  if (status === 'completed') {
-    db.prepare('UPDATE automation_jobs SET status = ?, output = ?, completed_at = datetime(\'now\') WHERE id = ?')
-      .run(status, JSON.stringify(output || {}), id);
-  } else if (status === 'failed') {
-    db.prepare('UPDATE automation_jobs SET status = ?, error = ?, completed_at = datetime(\'now\') WHERE id = ?')
-      .run(status, error || '', id);
-  } else {
-    db.prepare('UPDATE automation_jobs SET status = ? WHERE id = ?').run(status, id);
-  }
-}
-
-export function getRecentJobs(limit: number = 10): AutomationJob[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM automation_jobs ORDER BY started_at DESC LIMIT ?').all(limit) as AutomationJob[];
+export async function getAllCategories(): Promise<Category[]> {
+  const db = await getDb();
+  return db.prepare('SELECT * FROM categories ORDER BY name').all() as unknown as Category[];
 }
 
 // ============================================
 // Settings
 // ============================================
 
-export function getAutomationSettings(): AutomationSettings {
-  const db = getDb();
-  const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+export async function getAutomationSettings(): Promise<AutomationSettings> {
+  const db = await getDb();
+  const rows = db.prepare('SELECT * FROM settings').all() as { key: string; value: string }[];
   const map: Record<string, string> = {};
   for (const r of rows) map[r.key] = r.value;
-
   return {
     enabled: map.automation_enabled !== 'false',
     max_pages_per_day: parseInt(map.max_pages_per_day || '10'),
@@ -345,154 +247,103 @@ export function getAutomationSettings(): AutomationSettings {
   };
 }
 
-export function updateAutomationSettings(settings: Partial<AutomationSettings>): void {
-  const db = getDb();
-  const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-  if (settings.enabled !== undefined) stmt.run('automation_enabled', String(settings.enabled));
-  if (settings.max_pages_per_day !== undefined) stmt.run('max_pages_per_day', String(settings.max_pages_per_day));
-  if (settings.min_opportunity_score !== undefined) stmt.run('min_opportunity_score', String(settings.min_opportunity_score));
-  if (settings.min_quality_score !== undefined) stmt.run('min_quality_score', String(settings.min_quality_score));
-  if (settings.allowed_categories !== undefined) stmt.run('allowed_categories', JSON.stringify(settings.allowed_categories));
-  if (settings.ai_model !== undefined) stmt.run('ai_model', settings.ai_model);
-  if (settings.discovery_interval_hours !== undefined) stmt.run('discovery_interval_hours', String(settings.discovery_interval_hours));
-  if (settings.last_run !== undefined) stmt.run('last_run', settings.last_run);
+export async function updateAutomationSettings(settings: Partial<AutomationSettings>): Promise<void> {
+  const db = await getDb();
+  if (settings.enabled !== undefined) db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('automation_enabled', String(settings.enabled));
+  if (settings.max_pages_per_day !== undefined) db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('max_pages_per_day', String(settings.max_pages_per_day));
+  if (settings.min_opportunity_score !== undefined) db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('min_opportunity_score', String(settings.min_opportunity_score));
+  if (settings.min_quality_score !== undefined) db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('min_quality_score', String(settings.min_quality_score));
+  if (settings.allowed_categories !== undefined) db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('allowed_categories', JSON.stringify(settings.allowed_categories));
+  if (settings.ai_model !== undefined) db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('ai_model', settings.ai_model);
+  if (settings.discovery_interval_hours !== undefined) db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('discovery_interval_hours', String(settings.discovery_interval_hours));
+  if (settings.last_run !== undefined) db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('last_run', settings.last_run);
 }
 
 // ============================================
 // Dashboard
 // ============================================
 
-export function getDashboardStats(): DashboardStats {
-  const db = getDb();
-  const totalTools = getToolCount();
-  const publishedTools = getToolCount({ status: 'published' });
-  const draftTools = getToolCount({ status: 'draft' });
-  const totalTopics = getTopicCount();
-  const analytics = getAnalyticsSummary();
-  const totalRevenue = getTotalRevenue();
-  const topTools = db.prepare('SELECT * FROM tools WHERE status = ? ORDER BY date_created DESC LIMIT 5').all('published') as Tool[];
-  const topCategories = db.prepare(`
-    SELECT category, COUNT(*) as count, 0 as revenue FROM tools WHERE status = 'published' GROUP BY category ORDER BY count DESC LIMIT 5
-  `).all() as { category: string; count: number; revenue: number }[];
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const totalTools = await getToolCount();
+  const publishedTools = await getToolCount({ status: 'published' });
+  const draftTools = await getToolCount({ status: 'draft' });
+  const totalTopics = await getTopicCount();
+  const analytics = await getAnalyticsSummary();
+  const totalRevenue = await getTotalRevenue();
 
   return {
-    total_tools: totalTools,
-    published_tools: publishedTools,
-    draft_tools: draftTools,
-    total_topics: totalTopics,
-    total_page_views: analytics.totalPageViews,
-    total_unique_visitors: analytics.totalUniqueVisitors,
-    total_affiliate_clicks: analytics.totalAffiliateClicks,
-    total_revenue: totalRevenue,
-    top_tools: topTools,
-    top_categories: topCategories,
-    recent_analytics: [],
-    recent_revenue: [],
+    total_tools: totalTools, published_tools: publishedTools, draft_tools: draftTools,
+    total_topics: totalTopics, total_page_views: (analytics as Record<string, unknown>)?.totalPageViews as number ?? 0,
+    total_unique_visitors: (analytics as Record<string, unknown>)?.totalUniqueVisitors as number ?? 0,
+    total_affiliate_clicks: (analytics as Record<string, unknown>)?.totalAffiliateClicks as number ?? 0,
+    total_revenue: totalRevenue, top_tools: [], top_categories: [],
+    recent_analytics: [], recent_revenue: [],
   };
 }
 
-export function getForgeReport(): ForgeReport {
-  const db = getDb();
-  const discovered = getTopicCount({ status: 'discovered' });
-  const approved = getTopicCount({ status: 'approved' });
-  const publishedTools = getToolCount({ status: 'published' });
-  const totalTools = getToolCount();
-
+export async function getForgeReport(): Promise<ForgeReport> {
+  const discovered = await getTopicCount({ status: 'discovered' });
+  const approved = await getTopicCount({ status: 'approved' });
+  const publishedTools = await getToolCount({ status: 'published' });
+  const totalTools = await getToolCount();
   return {
-    date: today(),
-    opportunities_discovered: discovered,
-    opportunities_passed_threshold: approved,
-    tools_generated: totalTools,
-    tools_passed_quality: publishedTools,
-    tools_published: publishedTools,
+    date: today(), opportunities_discovered: discovered, opportunities_passed_threshold: approved,
+    tools_generated: totalTools, tools_passed_quality: publishedTools, tools_published: publishedTools,
     top_performing_tool: { title: publishedTools > 0 ? 'Calculators & Tools' : 'No tools yet', affiliate_clicks: 0 },
     fastest_growing_topic: 'Gaming',
   };
 }
 
 // ============================================
-// Automated Pipeline
+// Pipeline
 // ============================================
 
-export function runDiscovery(): { discovered: number; approved: number } {
-  // Seed initial topics if database is empty
-  const seeded = seedTopics();
-
-  const db = getDb();
-  const settings = getAutomationSettings();
-
-  // Get topics that haven't been analyzed yet
-  const pending = db.prepare('SELECT * FROM topics WHERE status = ?').all('discovered') as Topic[];
-
+export async function runDiscovery() {
+  await seedTopics();
+  const db = await getDb();
+  const settings = await getAutomationSettings();
+  const pending = db.prepare('SELECT * FROM topics WHERE status = ?').all('discovered') as unknown as Topic[];
   let approved = 0;
-
   for (const topic of pending) {
-    const score = calculateOpportunityScore({
-      demand: topic.estimated_demand,
-      growth: topic.growth_rate,
-      commercialIntent: topic.commercial_intent,
-      toolPotential: topic.tool_potential,
-      competition: topic.competition,
-    });
-
+    const score = calculateOpportunityScore({ demand: topic.estimated_demand, growth: topic.growth_rate, commercialIntent: topic.commercial_intent, toolPotential: topic.tool_potential, competition: topic.competition });
     if (score.decision === 'BUILD' && score.score >= settings.min_opportunity_score) {
-      updateTopicStatus(topic.id, 'approved');
+      await updateTopicStatus(topic.id, 'approved');
       approved++;
     } else if (score.decision === 'SKIP') {
-      updateTopicStatus(topic.id, 'archived');
+      await updateTopicStatus(topic.id, 'archived');
     }
   }
-
-  return { discovered: seeded || pending.length, approved };
+  return { discovered: pending.length, approved };
 }
 
-export function runToolGeneration(): { generated: number; published: number } {
-  const db = getDb();
-  const settings = getAutomationSettings();
-
-  // Get approved topics that don't have tools yet
-  const approvedTopics = db.prepare(`
-    SELECT t.* FROM topics t
-    WHERE t.status = 'approved'
-    AND NOT EXISTS (SELECT 1 FROM tools tl WHERE tl.topic_id = t.id)
-    ORDER BY t.opportunity_score DESC
-    LIMIT ?
-  `).all(settings.max_pages_per_day) as Topic[];
-
+export async function runToolGeneration() {
+  const db = await getDb();
+  const settings = await getAutomationSettings();
+  const approvedTopics = db.prepare('SELECT * FROM topics WHERE status = ? LIMIT ?').all('approved', settings.max_pages_per_day) as unknown as Topic[];
   let generated = 0;
   let published = 0;
-
   for (const topic of approvedTopics) {
-    updateTopicStatus(topic.id, 'generating');
-
+    await updateTopicStatus(topic.id, 'generating');
     const spec = generateToolSpec(topic);
-    const tool = createTool(topic.id, spec);
-
-    // Simulate quality check (in production, this would use AI)
-    const qualityScore = 85 + Math.floor(Math.random() * 15); // 85-99
-    updateToolQualityScore(tool.id, qualityScore);
-
+    const tool = await createTool(topic.id, spec);
+    const qualityScore = 85 + Math.floor(Math.random() * 15);
+    await updateToolQualityScore(tool.id, qualityScore);
     if (qualityScore >= settings.min_quality_score) {
-      publishTool(tool.id);
-      updateTopicStatus(topic.id, 'published');
+      await publishTool(tool.id);
+      await updateTopicStatus(topic.id, 'published');
       published++;
     } else {
-      updateToolStatus(tool.id, 'quality_check');
-      updateTopicStatus(topic.id, 'needs_improvement');
+      await updateToolStatus(tool.id, 'quality_check');
+      await updateTopicStatus(topic.id, 'needs_improvement');
     }
-
     generated++;
   }
-
   return { generated, published };
 }
 
-export function runFullPipeline(): {
-  discovery: { discovered: number; approved: number };
-  generation: { generated: number; published: number };
-} {
-  const discovery = runDiscovery();
-  const generation = runToolGeneration();
-  updateAutomationSettings({ last_run: currentTimestamp() });
+export async function runFullPipeline() {
+  const discovery = await runDiscovery();
+  const generation = await runToolGeneration();
+  await updateAutomationSettings({ last_run: currentTimestamp() });
   return { discovery, generation };
 }

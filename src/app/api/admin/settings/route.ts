@@ -4,13 +4,13 @@ import { getAutomationSettings, updateAutomationSettings, getAllCategories } fro
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const settings = getAutomationSettings();
-  const categories = getAllCategories();
+  const settings = await getAutomationSettings();
+  const categories = await getAllCategories();
   return NextResponse.json({ settings, categories });
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  updateAutomationSettings(body);
+  await updateAutomationSettings(body);
   return NextResponse.json({ ok: true });
 }

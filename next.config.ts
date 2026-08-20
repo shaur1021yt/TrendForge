@@ -1,11 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['better-sqlite3'],
-  experimental: {
-    // Allow better-sqlite3 to work with server components
-  },
-  // SEO-friendly URLs
   async headers() {
     return [
       {
