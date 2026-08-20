@@ -281,32 +281,37 @@ function calcGamingPC(v: Record<string, string | number>): Record<string, string
   const psuBudget = Math.round(budget * 0.07);
   const caseBudget = Math.round(budget * 0.06);
 
-  // GPU recommendations
+  // GPU recommendations — 2025 pricing
   let gpu: string;
-  if (gpuBudget >= 600) gpu = 'NVIDIA RTX 4070 Ti ($600+)';
-  else if (gpuBudget >= 400) gpu = 'NVIDIA RTX 4070 ($400+)';
-  else if (gpuBudget >= 300) gpu = 'NVIDIA RTX 4060 Ti ($300+)';
-  else if (gpuBudget >= 200) gpu = 'NVIDIA RTX 4060 / AMD RX 7600 ($200+)';
-  else gpu = 'AMD RX 7600 / Intel Arc A750 ($180+)';
+  if (gpuBudget >= 800) gpu = 'NVIDIA RTX 5080 ($999)';
+  else if (gpuBudget >= 600) gpu = 'NVIDIA RTX 5070 Ti ($749)';
+  else if (gpuBudget >= 450) gpu = 'NVIDIA RTX 5070 ($549)';
+  else if (gpuBudget >= 350) gpu = 'AMD RX 9070 XT ($499)';
+  else if (gpuBudget >= 250) gpu = 'AMD RX 9070 ($399) / NVIDIA RTX 4060 Ti ($379)';
+  else if (gpuBudget >= 180) gpu = 'NVIDIA RTX 4060 ($279) / AMD RX 7600 ($249)';
+  else gpu = 'Intel Arc B580 ($199) / AMD RX 7600 ($229)';
 
-  // CPU recommendations
+  // CPU recommendations — 2025 lineup
   let cpu: string;
-  if (cpuBudget >= 300) cpu = 'AMD Ryzen 7 7800X3D ($300+)';
-  else if (cpuBudget >= 200) cpu = 'AMD Ryzen 5 7600X ($200+)';
-  else if (cpuBudget >= 150) cpu = 'AMD Ryzen 5 5600X ($130+)';
-  else cpu = 'Intel Core i5-12400F ($110+)';
+  if (cpuBudget >= 350) cpu = 'AMD Ryzen 7 9800X3D ($449) — best gaming CPU';
+  else if (cpuBudget >= 250) cpu = 'AMD Ryzen 7 7800X3D ($329)';
+  else if (cpuBudget >= 180) cpu = 'AMD Ryzen 5 9600X ($229) / Intel Core i5-14600K ($219)';
+  else if (cpuBudget >= 120) cpu = 'AMD Ryzen 5 7600 ($169)';
+  else cpu = 'AMD Ryzen 5 5600 ($119) / Intel Core i5-12400F ($109)';
 
-  // RAM
+  // RAM — DDR5 standard in 2025
   let ram: string;
-  if (budget >= 1500) ram = '32GB DDR5-5600';
-  else if (budget >= 800) ram = '16GB DDR5-5200';
+  if (budget >= 1500) ram = '32GB DDR5-6000';
+  else if (budget >= 800) ram = '32GB DDR5-5600';
+  else if (budget >= 500) ram = '16GB DDR5-5200';
   else ram = '16GB DDR4-3200';
 
-  // Storage
+  // Storage — Gen5 NVMe available
   let storage: string;
-  if (budget >= 1500) storage = '1TB NVMe Gen4 SSD';
-  else if (budget >= 800) storage = '512GB NVMe SSD';
-  else storage = '512GB SATA SSD';
+  if (budget >= 1500) storage = '2TB NVMe Gen4 SSD';
+  else if (budget >= 800) storage = '1TB NVMe Gen4 SSD';
+  else if (budget >= 500) storage = '512GB NVMe Gen4 SSD';
+  else storage = '512GB NVMe SSD';
 
   // FPS estimation
   let fpsBase: number;
@@ -331,7 +336,7 @@ function calcMortgage(v: Record<string, string | number>): Record<string, string
   const income = Number(v.annualIncome) || 80000;
   const monthlyDebt = Number(v.monthlyDebt) || 0;
   const downPayment = Number(v.downPayment) || 0;
-  const rate = Number(v.interestRate) || 6.5;
+  const rate = Number(v.interestRate) || 6.9;
   const term = String(v.loanTerm) || '30 years';
 
   const termYears = term.includes('15') ? 15 : term.includes('20') ? 20 : 30;
@@ -536,9 +541,11 @@ function calcSalary(v: Record<string, string | number>): Record<string, string> 
 
   // Salary database (simplified)
   const baseSalaries: Record<string, number> = {
-    'software engineer': 120000, 'data scientist': 115000,
-    'product manager': 130000, 'designer': 95000,
-    'marketing manager': 85000, 'accountant': 75000,
+    'software engineer': 135000, 'data scientist': 125000,
+    'product manager': 145000, 'designer': 105000,
+    'marketing manager': 95000, 'accountant': 80000,
+    'ai engineer': 160000, 'devops': 130000,
+    'cybersecurity': 120000, 'nurse': 85000,
   };
 
   const expMultipliers: Record<string, number> = {
@@ -741,7 +748,7 @@ function calcRAM(v: Record<string, string | number>): Record<string, string> {
 
   const recommendations: Record<string, { ram: string; speed: string; reason: string }> = {
     'Light Gaming': { ram: '16GB', speed: 'DDR5-5200', reason: 'Sufficient for most games and multitasking' },
-    'Gaming': { ram: '16GB', speed: 'DDR5-5600', reason: 'Sweet spot for gaming in 2024' },
+    'Gaming': { ram: '16GB', speed: 'DDR5-5600', reason: 'Sweet spot for gaming in 2025' },
     'Heavy Multitasking': { ram: '32GB', speed: 'DDR5-5600', reason: 'Better for streaming, multiple apps, and heavy workloads' },
     'Content Creation': { ram: '32GB', speed: 'DDR5-6000', reason: 'Video editing and rendering benefit from more RAM' },
     'Workstation': { ram: '64GB', speed: 'DDR5-6000', reason: 'For professional 3D rendering, ML training, large datasets' },
@@ -823,34 +830,34 @@ function calcLaptop(v: Record<string, string | number>): Record<string, string> 
 
   const recs: Record<string, { top: string; budget: string; premium: string }> = {
     'Gaming': {
-      top: 'ASUS ROG Zephyrus G14 (~$1,500)',
-      budget: 'Lenovo LOQ 15 (~$800)',
-      premium: 'Razer Blade 16 (~$2,800)',
+      top: 'ASUS ROG Zephyrus G14 2025 (~$1,699)',
+      budget: 'Lenovo LOQ 15 2025 (~$899)',
+      premium: 'Razer Blade 16 (~$2,999)',
     },
     'Programming': {
-      top: 'MacBook Air M3 (~$1,100)',
-      budget: 'Lenovo IdeaPad 5 Pro (~$700)',
-      premium: 'MacBook Pro 16 M3 Max (~$2,500)',
+      top: 'MacBook Air M4 (~$1,099)',
+      budget: 'Lenovo IdeaPad 5 2025 (~$749)',
+      premium: 'MacBook Pro 16 M4 Max (~$2,499)',
     },
     'Design': {
-      top: 'MacBook Pro 14 M3 (~$1,600)',
-      budget: 'ASUS ZenBook 14 (~$900)',
-      premium: 'MacBook Pro 16 M3 Max (~$2,500)',
+      top: 'MacBook Pro 14 M4 Pro (~$1,799)',
+      budget: 'ASUS ZenBook 14 OLED (~$999)',
+      premium: 'MacBook Pro 16 M4 Max (~$2,499)',
     },
     'Business': {
-      top: 'ThinkPad X1 Carbon (~$1,400)',
-      budget: 'Lenovo ThinkBook 14 (~$700)',
-      premium: 'Dell XPS 15 (~$1,800)',
+      top: 'ThinkPad X1 Carbon Gen 13 (~$1,449)',
+      budget: 'Lenovo ThinkBook 14 Gen 7 (~$749)',
+      premium: 'Dell XPS 16 2025 (~$1,899)',
     },
     'Student': {
-      top: 'MacBook Air M3 (~$1,000)',
-      budget: 'Acer Swift 3 (~$500)',
-      premium: 'MacBook Air M3 15 (~$1,300)',
+      top: 'MacBook Air M4 (~$1,099)',
+      budget: 'Acer Swift Go 14 (~$549)',
+      premium: 'MacBook Air M4 15" (~$1,299)',
     },
     'General Use': {
-      top: 'MacBook Air M3 (~$1,000)',
-      budget: 'Acer Aspire 5 (~$450)',
-      premium: 'Dell XPS 13 (~$1,200)',
+      top: 'MacBook Air M4 (~$1,099)',
+      budget: 'Acer Aspire 5 (~$479)',
+      premium: 'Dell XPS 13 2025 (~$1,299)',
     },
   };
 
